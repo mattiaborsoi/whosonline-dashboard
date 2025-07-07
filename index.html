@@ -10,30 +10,56 @@
         body {
             font-family: 'Inter', sans-serif;
         }
-        /* Custom styles for status indicators and animations */
+        /* -- Status Indicators -- */
         .status-dot {
             width: 12px;
             height: 12px;
             border-radius: 50%;
             transition: background-color 0.5s ease-in-out;
         }
-        .status-online {
-            background-color: #22c55e; /* green-500 */
-            box-shadow: 0 0 8px #22c55e;
-        }
-        .status-offline {
-            background-color: #6b7280; /* gray-500 */
-        }
-        .status-fortnite {
-            background-color: #8b5cf6; /* violet-500 */
-            box-shadow: 0 0 8px #8b5cf6;
-        }
+        .status-online { background-color: #22c55e; box-shadow: 0 0 8px #22c55e; }
+        .status-offline { background-color: #6b7280; }
+        .status-fortnite { background-color: #8b5cf6; box-shadow: 0 0 8px #8b5cf6; }
+
+        /* -- Card Styles -- */
         .friend-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
+            border: 2px solid #374151; /* border-gray-700 */
         }
         .friend-card:hover {
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+        }
+        /* NEW: Style for when a user is planning to play */
+        .planning-to-play {
+            border-color: #3b82f6; /* blue-500 */
+            box-shadow: 0 0 12px rgba(59, 130, 246, 0.5);
+        }
+
+        /* -- Custom Toggle Switch -- */
+        .toggle-label { cursor: pointer; }
+        .toggle-checkbox { display: none; }
+        .toggle-switch {
+            width: 40px; height: 20px;
+            background-color: #4b5563; /* gray-600 */
+            border-radius: 9999px;
+            position: relative;
+            transition: background-color 0.2s ease-in-out;
+        }
+        .toggle-switch::before {
+            content: '';
+            position: absolute;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background-color: white;
+            top: 2px; left: 2px;
+            transition: transform 0.2s ease-in-out;
+        }
+        .toggle-checkbox:checked + .toggle-switch {
+            background-color: #3b82f6; /* blue-500 */
+        }
+        .toggle-checkbox:checked + .toggle-switch::before {
+            transform: translateX(20px);
         }
     </style>
 </head>
@@ -44,38 +70,28 @@
         <header class="text-center mb-8">
             <h1 class="text-4xl font-bold tracking-tight text-white sm:text-5xl">WhosOnline</h1>
             <p class="mt-2 text-lg text-gray-400">Your friends' live gaming status.</p>
-            <div class="mt-4 flex items-center justify-center space-x-4 text-sm text-gray-300">
-                <div class="flex items-center">
-                    <div class="status-dot status-online mr-2"></div>
-                    <span>Online</span>
-                </div>
-                 <div class="flex items-center">
-                    <div class="status-dot status-fortnite mr-2"></div>
-                    <span>On Fortnite</span>
-                </div>
-                <div class="flex items-center">
-                    <div class="status-dot status-offline mr-2"></div>
-                    <span>Offline</span>
-                </div>
+            <!-- Legend -->
+            <div class="mt-4 flex items-center justify-center flex-wrap gap-x-4 gap-y-2 text-sm text-gray-300">
+                <div class="flex items-center"><div class="w-4 h-4 rounded-full border-2 border-blue-500 mr-2"></div><span>Planning to Play</span></div>
+                <div class="flex items-center"><div class="status-dot status-online mr-2"></div><span>Online</span></div>
+                <div class="flex items-center"><div class="status-dot status-fortnite mr-2"></div><span>On Fortnite</span></div>
+                <div class="flex items-center"><div class="status-dot status-offline mr-2"></div><span>Offline</span></div>
             </div>
         </header>
 
         <!-- Friends Grid -->
         <main id="friends-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 sm:gap-6">
-            <!-- Friend cards will be dynamically inserted here by JavaScript -->
+            <!-- Friend cards will be dynamically inserted here -->
         </main>
 
-        <!-- Footer -->
         <footer class="text-center mt-12 text-gray-500">
             <p>Last updated: <span id="last-updated">Never</span></p>
-            <p class="mt-1 text-xs">Status is updated every 15 seconds from the live backend.</p>
         </footer>
     </div>
 
     <script>
         // --- CONFIGURATION ---
-        // IMPORTANT: Replace this URL with the URL of your deployed Cloudflare Worker!
-        const BACKEND_URL = 'https://whosonline-backend.borsoi.workers.dev';
+        const BACKEND_URL = 'https://whosonline-backend.borsoi.workers.dev'; // <-- Make sure this is your worker's URL
 
         const platformIcons = {
             xbox: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="currentColor" class="text-green-400"><path d="M11.998 2.56a1.534 1.534 0 0 0-.933.328L4.04 7.693a1.531 1.531 0 0 0-.693 1.325v5.964a1.531 1.531 0 0 0 .692 1.325l7.025 4.805a1.533 1.533 0 0 0 .933.328c.355 0 .69-.115.955-.328l7.026-4.805a1.531 1.531 0 0 0 .692-1.325V9.018a1.531 1.531 0 0 0-.692-1.325L12.953 2.888a1.534 1.534 0 0 0-.955-.328zm-4.48 5.433c.264-.132.593-.033.759.231l2.016 3.102a.52.52 0 0 1-.022.683l-2.28 1.893a.52.52 0 0 1-.683-.022l-1.61-1.98a.52.52 0 0 1 .195-.74l1.625-.973zm8.96 0c.264.132.363.461.231.726l-1.61 2.418a.52.52 0 0 1-.683.157l-2.28-1.14a.52.52 0 0 1-.157-.683l1.52-2.418a.52.52 0 0 1 .726-.231l2.253 1.171z"/></svg>`,
@@ -86,45 +102,31 @@
         const friendsGrid = document.getElementById('friends-grid');
         const lastUpdatedEl = document.getElementById('last-updated');
 
-        /**
-         * Fetches friend status data from the backend worker.
-         */
+        // --- DATA FETCHING ---
         async function fetchFriendStatus() {
-            console.log("Fetching friend statuses from:", BACKEND_URL);
             const response = await fetch(BACKEND_URL);
-            if (!response.ok) {
-                throw new Error(`Network response was not ok: ${response.statusText}`);
-            }
-            const data = await response.json();
-            return data;
+            if (!response.ok) throw new Error(`Network response was not ok: ${response.statusText}`);
+            return await response.json();
         }
 
-        /**
-         * Renders the friend cards on the page based on the data received.
-         * @param {Array} statusData - Array of friend objects with their status.
-         */
+        // --- RENDERING ---
         function renderFriends(statusData) {
-            friendsGrid.innerHTML = ''; // Clear the grid before rendering
-
+            friendsGrid.innerHTML = ''; // Clear before rendering
             statusData.forEach(friend => {
-                let statusClass = 'status-offline';
-                let statusText = 'Offline';
-                let gameText = '&nbsp;'; // Non-breaking space to maintain height
-
+                let statusClass = 'status-offline', statusText = 'Offline', gameText = '&nbsp;';
                 if (friend.status === 'online') {
-                    statusClass = 'status-online';
-                    statusText = 'Online';
-                    if (friend.game) {
-                       gameText = `Playing: ${friend.game}`;
-                    }
+                    statusClass = 'status-online'; statusText = 'Online';
+                    if (friend.game) gameText = `Playing: ${friend.game}`;
                 } else if (friend.status === 'online-fortnite') {
-                    statusClass = 'status-fortnite';
-                    statusText = 'Online';
+                    statusClass = 'status-fortnite'; statusText = 'Online';
                     gameText = `Playing: <strong>${friend.game}</strong>`;
                 }
+                
+                const planningClass = friend.isPlanningToPlay ? 'planning-to-play' : '';
+                const isChecked = friend.isPlanningToPlay ? 'checked' : '';
 
                 const cardHTML = `
-                    <div class="friend-card bg-gray-800 rounded-lg p-4 flex flex-col items-center text-center border border-gray-700 shadow-lg">
+                    <div class="friend-card bg-gray-800 rounded-lg p-4 flex flex-col items-center text-center shadow-lg ${planningClass}">
                         <div class="relative w-16 h-16 mb-3">
                             <img src="https://placehold.co/96x96/1f2937/7ca8bf?text=${friend.name.charAt(0)}" alt="${friend.name}" class="rounded-full w-full h-full object-cover border-2 border-gray-600">
                             <div class="status-dot ${statusClass} absolute bottom-0 right-0 border-2 border-gray-800"></div>
@@ -135,15 +137,53 @@
                             <span class="ml-2 text-sm">${statusText}</span>
                         </div>
                         <p class="text-xs text-violet-300 mt-2 h-4">${gameText}</p>
+                        
+                        <!-- NEW: Planning Toggle Switch -->
+                        <div class="mt-3 pt-3 border-t border-gray-700 w-full flex items-center justify-center space-x-2">
+                            <span class="text-xs text-gray-400">On tonight?</span>
+                            <label class="toggle-label">
+                                <input type="checkbox" class="toggle-checkbox" data-name="${friend.name}" ${isChecked}>
+                                <div class="toggle-switch"></div>
+                            </label>
+                        </div>
                     </div>
                 `;
                 friendsGrid.innerHTML += cardHTML;
             });
         }
 
-        /**
-         * Main function to fetch data and update the UI.
-         */
+        // --- EVENT HANDLING ---
+        
+        // NEW: Function to send the planning status update to the backend
+        async function updatePlanningStatus(name, isPlanningToPlay) {
+            try {
+                await fetch(BACKEND_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ name, isPlanningToPlay }),
+                });
+            } catch (error) {
+                console.error("Failed to update planning status:", error);
+                // Optionally, revert the toggle if the API call fails
+            }
+        }
+
+        // Use event delegation for the toggle switches
+        friendsGrid.addEventListener('change', (event) => {
+            if (event.target.classList.contains('toggle-checkbox')) {
+                const name = event.target.dataset.name;
+                const isPlanningToPlay = event.target.checked;
+                
+                // Immediately update the UI for a snappy feel
+                const card = event.target.closest('.friend-card');
+                card.classList.toggle('planning-to-play', isPlanningToPlay);
+
+                // Send the update to the backend
+                updatePlanningStatus(name, isPlanningToPlay);
+            }
+        });
+
+        // --- MAIN UPDATE LOOP ---
         async function updateDashboard() {
             try {
                 const statusData = await fetchFriendStatus();
@@ -151,16 +191,13 @@
                 lastUpdatedEl.textContent = new Date().toLocaleTimeString();
             } catch (error) {
                 console.error("Failed to update dashboard:", error);
-                friendsGrid.innerHTML = `<p class="text-red-400 col-span-full text-center">Could not load friend statuses. Check backend URL and worker status.</p>`;
+                friendsGrid.innerHTML = `<p class="text-red-400 col-span-full text-center">Could not load friend statuses.</p>`;
             }
         }
 
-        // --- INITIALIZATION ---
-        // Initial load
+        // Initial load and periodic refresh
         updateDashboard();
-
-        // Set interval to refresh the data every 15 seconds (15000 milliseconds)
-        setInterval(updateDashboard, 15000);
+        setInterval(updateDashboard, 30000); // Refresh every 30 seconds
     </script>
 
 </body>
